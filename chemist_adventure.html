@@ -1,0 +1,1116 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Chemist Adventure</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:#F0FDF4;min-height:100vh;padding:1rem}
+#app{width:100%;max-width:480px;background:#fff;border-radius:20px;padding:1.5rem;min-height:98vh;box-shadow:0 4px 24px rgba(16,120,60,.1);margin:0 auto}
+.screen{display:none}.screen.active{display:block}
+h1{font-size:2rem;font-weight:700;color:#166534}h1 span{color:#EA580C}
+.tagline{font-size:13px;color:#888;margin-top:6px}
+/* AUTH */
+.auth-wrap{padding:2rem 0}.auth-header{text-align:center;margin-bottom:2rem}
+.tab-row{display:flex;margin-bottom:1.5rem;border:1.5px solid #D1FAE5;border-radius:12px;overflow:hidden}
+.tab-btn{flex:1;padding:10px;background:transparent;border:none;font-size:14px;cursor:pointer;color:#888;font-weight:600}
+.tab-btn.active{background:#166534;color:#fff}
+.field{margin-bottom:1rem}
+.field label{display:block;font-size:12px;color:#5F5E5A;font-weight:600;margin-bottom:4px}
+.field input{width:100%;padding:12px 14px;border:1.5px solid #D1FAE5;border-radius:10px;font-size:14px;outline:none;transition:border-color .15s}
+.field input:focus{border-color:#16A34A}
+.field input:disabled{background:#F0FDF4;color:#888}
+.btn-primary{display:block;background:#166534;color:#fff;border:none;border-radius:12px;padding:14px;font-size:15px;font-weight:700;cursor:pointer;width:100%;margin-top:.5rem;transition:background .15s}
+.btn-primary:hover{background:#14532D}.btn-primary:disabled{background:#B4B2A9;cursor:default}
+.auth-msg{font-size:13px;text-align:center;margin-top:1rem;min-height:20px}
+.auth-msg.error{color:#A32D2D}.auth-msg.success{color:#166534}
+/* HOME */
+.home-header{text-align:center;padding:1.5rem 0 1rem}
+.user-bar{display:flex;align-items:center;justify-content:space-between;margin-bottom:1rem;padding-bottom:1rem;border-bottom:1.5px solid #F0FDF4}
+.user-name{font-size:13px;color:#5F5E5A;font-weight:600}
+.user-lives{display:flex;align-items:center;gap:6px;font-size:13px;font-weight:600;color:#EA580C}
+.lives-timer{font-size:11px;color:#888;font-weight:400}
+.user-bar-right{display:flex;gap:6px;align-items:center}
+.profile-btn{font-size:12px;color:#166534;background:none;border:1px solid #166534;border-radius:8px;padding:4px 10px;cursor:pointer;font-weight:600}
+.logout-btn{font-size:12px;color:#888;background:none;border:1px solid #E8E6F8;border-radius:8px;padding:4px 10px;cursor:pointer}
+/* GRADE TABS */
+.grade-row{display:flex;gap:8px;margin-bottom:1rem}
+.grade-btn{flex:1;padding:10px 6px;background:#F0FDF4;border:2px solid #D1FAE5;border-radius:12px;font-size:13px;font-weight:700;color:#166534;cursor:pointer;text-align:center;transition:all .2s}
+.grade-btn.active{background:#166534;color:#fff;border-color:#166534}
+.grade-btn:hover:not(.active){background:#DCFCE7;border-color:#16A34A}
+.grade-label{font-size:11px;opacity:.8;margin-top:2px}
+/* NAV */
+.nav-row{display:flex;gap:8px;margin-bottom:1.25rem}
+.nav-btn{flex:1;padding:8px;background:#F0FDF4;border:1.5px solid #D1FAE5;border-radius:10px;font-size:13px;font-weight:600;color:#166534;cursor:pointer;transition:all .15s}
+.nav-btn.active{background:#166534;color:#fff;border-color:#166534}
+.nav-btn:hover:not(.active){background:#DCFCE7}
+/* LIVES BANNER */
+.no-lives-banner{background:#FEF2F2;border:1.5px solid #A32D2D;border-radius:12px;padding:1rem;text-align:center;margin-bottom:1rem}
+.no-lives-title{font-size:15px;font-weight:700;color:#501313;margin-bottom:4px}
+.no-lives-sub{font-size:13px;color:#A32D2D}
+.no-lives-countdown{font-size:20px;font-weight:700;color:#A32D2D;margin-top:6px}
+/* WORLD */
+.world-list{display:grid;gap:14px;padding-bottom:1rem}
+.world-card{border:1.5px solid #D1FAE5;border-radius:16px;overflow:hidden;cursor:pointer;transition:transform .15s,box-shadow .15s}
+.world-card:hover:not(.locked){transform:translateY(-2px);box-shadow:0 4px 16px rgba(16,120,60,.12)}
+.world-card.locked{opacity:.5;cursor:pointer}
+.world-header{padding:1rem 1.25rem;display:flex;align-items:center;gap:12px}
+.world-icon{font-size:2rem}.world-info{flex:1}
+.world-name{font-size:15px;font-weight:700;color:#2C2C2A}
+.world-desc{font-size:12px;color:#888;margin-top:2px}
+.world-progress{font-size:12px;font-weight:600;padding:2px 10px;border-radius:20px;white-space:nowrap}
+.world-levels{padding:.75rem 1.25rem;background:#F9FAFB;border-top:1px solid #F0FDF4;display:flex;gap:6px;flex-wrap:wrap}
+.level-dot{width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;border:1.5px solid #D1FAE5;color:#888;background:#fff}
+.level-dot.done{background:#DCFCE7;border-color:#16A34A;color:#166534}
+.level-dot.unlocked{background:#FEF9C3;border-color:#CA8A04;color:#854D0E}
+.level-dot.locked{background:#F1EFE8;color:#B4B2A9}
+.coming-soon-badge{font-size:10px;font-weight:700;color:#888;background:#F1EFE8;border-radius:20px;padding:2px 8px}
+/* LEVEL SELECT */
+.back-btn{background:none;border:none;font-size:13px;color:#166534;cursor:pointer;padding:0 0 1rem;font-weight:600;display:block}
+.level-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;padding:.5rem 0}
+.level-card{background:#fff;border:1.5px solid #D1FAE5;border-radius:14px;padding:1rem;cursor:pointer;transition:transform .15s;text-align:center}
+.level-card:hover:not(.lc-locked){transform:translateY(-2px)}
+.level-card.lc-locked{opacity:.45;cursor:default}
+.level-card.lc-done{border-color:#16A34A}.level-card.lc-unlocked{border-color:#CA8A04}
+.lc-num{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px}
+.lc-name{font-size:12px;color:#5F5E5A;line-height:1.4}
+.lc-badge{display:inline-block;font-size:11px;padding:2px 8px;border-radius:20px;margin-top:6px;font-weight:600}
+/* QUIZ */
+.quiz-header{display:flex;align-items:center;justify-content:space-between;padding:0 0 1rem;border-bottom:1.5px solid #F0FDF4;margin-bottom:1.25rem}
+.hearts{display:flex;gap:3px;font-size:20px}
+.xp-badge{background:#DCFCE7;color:#166534;font-size:13px;font-weight:700;padding:4px 14px;border-radius:20px}
+.timer-circle{position:relative;width:44px;height:44px}
+.timer-svg{transform:rotate(-90deg)}
+.timer-num{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);font-size:13px;font-weight:700;color:#444}
+.progress-wrap{margin-bottom:1.25rem}
+.progress-label{font-size:11px;color:#888;margin-bottom:4px}
+.progress-bar{height:8px;background:#F0FDF4;border-radius:4px;overflow:hidden}
+.progress-fill{height:100%;background:linear-gradient(90deg,#16A34A,#EA580C);border-radius:4px;transition:width .35s}
+.question-text{font-size:17px;font-weight:600;color:#2C2C2A;line-height:1.55;margin-bottom:1.5rem;min-height:80px}
+.options{display:grid;gap:10px}
+.option-btn{background:#fff;border:1.5px solid #D1FAE5;border-radius:12px;padding:13px 16px;text-align:left;font-size:14px;color:#2C2C2A;cursor:pointer;transition:all .15s;display:flex;align-items:center;gap:10px;width:100%}
+.option-btn:hover:not(:disabled){border-color:#16A34A;background:#F0FDF4;color:#14532D}
+.option-btn.correct{background:#DCFCE7;border-color:#16A34A;color:#166534}
+.option-btn.wrong{background:#FEF2F2;border-color:#A32D2D;color:#501313}
+.option-btn:disabled{cursor:default}
+.opt-letter{width:28px;height:28px;border-radius:50%;background:#F0FDF4;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;flex-shrink:0;color:#5F5E5A}
+.option-btn.correct .opt-letter{background:#16A34A;color:#fff}
+.option-btn.wrong .opt-letter{background:#A32D2D;color:#fff}
+.feedback{margin-top:1rem;padding:12px 16px;border-radius:10px;font-size:14px;font-weight:600}
+.feedback.correct{background:#DCFCE7;color:#166534}
+.feedback.wrong{background:#FEF2F2;color:#501313}
+/* RESULT */
+.center-wrap{text-align:center;padding:2.5rem 1rem}
+.big-icon{font-size:4.5rem;margin-bottom:1rem}
+.result-title{font-size:24px;font-weight:700;color:#2C2C2A;margin-bottom:6px}
+.result-sub{font-size:13px;color:#888;margin-bottom:.5rem}
+.score-display{font-size:3.5rem;font-weight:700;color:#166534;margin:.5rem 0}
+.stars{font-size:2.2rem;margin:.25rem 0 1.25rem}
+.xp-earned{display:inline-block;background:#DCFCE7;color:#166534;font-size:16px;font-weight:700;padding:8px 24px;border-radius:20px;margin-bottom:1rem}
+.pass-badge{background:#DCFCE7;color:#166534;font-size:13px;font-weight:700;padding:6px 16px;border-radius:20px;display:inline-block;margin-bottom:1rem}
+.fail-badge{background:#FEF2F2;color:#501313;font-size:13px;font-weight:700;padding:6px 16px;border-radius:20px;display:inline-block;margin-bottom:1rem}
+.btn-secondary{display:block;background:transparent;color:#166534;border:2px solid #166534;border-radius:12px;padding:13px;font-size:15px;font-weight:600;cursor:pointer;width:100%;margin-top:10px;transition:background .15s}
+.btn-secondary:hover{background:#F0FDF4}
+.loading{text-align:center;padding:3rem;color:#888;font-size:14px}
+/* RANKING */
+.rank-header{text-align:center;padding:1rem 0 1.5rem}
+.rank-title{font-size:20px;font-weight:700;color:#2C2C2A}
+.rank-sub{font-size:13px;color:#888;margin-top:4px}
+.rank-list{display:grid;gap:10px;padding-bottom:1rem}
+.rank-card{display:flex;align-items:center;gap:12px;padding:12px 16px;border:1.5px solid #D1FAE5;border-radius:14px;background:#fff}
+.rank-card.me{border-color:#16A34A;background:#F0FDF4}
+.rank-card.gold{border-color:#EF9F27}.rank-card.silver{border-color:#B4B2A9}.rank-card.bronze{border-color:#D85A30}
+.rank-pos{font-size:20px;width:32px;text-align:center;font-weight:700;color:#888;flex-shrink:0}
+.rank-pos.gold{color:#BA7517}.rank-pos.silver{color:#5F5E5A}.rank-pos.bronze{color:#D85A30}
+.rank-avatar{width:40px;height:40px;border-radius:50%;background:#DCFCE7;display:flex;align-items:center;justify-content:center;font-size:16px;font-weight:700;color:#166534;flex-shrink:0}
+.rank-info{flex:1}
+.rank-name{font-size:14px;font-weight:700;color:#2C2C2A}
+.rank-detail{font-size:12px;color:#888;margin-top:2px}
+.rank-xp{text-align:right}
+.rank-xp-val{font-size:15px;font-weight:700;color:#166534}
+.rank-xp-lv{font-size:11px;color:#888}
+/* PROFILE */
+.profile-avatar{width:80px;height:80px;border-radius:50%;background:linear-gradient(135deg,#166534,#EA580C);display:flex;align-items:center;justify-content:center;font-size:2rem;font-weight:700;color:#fff;margin:0 auto 12px}
+.profile-nickname{font-size:20px;font-weight:700;color:#2C2C2A}
+.profile-email{font-size:13px;color:#888;margin-top:4px}
+.profile-stats{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin:1.25rem 0}
+.stat-card{background:#F0FDF4;border-radius:12px;padding:.75rem;text-align:center}
+.stat-val{font-size:20px;font-weight:700;color:#166534}
+.stat-label{font-size:10px;color:#888;margin-top:4px;line-height:1.3}
+.profile-lives{background:#FFF7ED;border-radius:12px;padding:1rem;text-align:center;margin-bottom:1rem}
+.profile-lives-val{font-size:20px;margin-bottom:4px}
+.profile-lives-label{font-size:12px;color:#EA580C;font-weight:600}
+/* STAT BARS */
+.stat-section{margin-bottom:1.25rem}
+.stat-section-title{font-size:14px;font-weight:700;color:#2C2C2A;margin-bottom:10px}
+.clause-bar-wrap{margin-bottom:8px}
+.clause-bar-header{display:flex;justify-content:space-between;font-size:12px;margin-bottom:3px}
+.clause-bar-name{color:#5F5E5A;font-weight:600}
+.clause-bar-pct{font-weight:700}
+.clause-bar-bg{height:8px;background:#F0FDF4;border-radius:4px;overflow:hidden}
+.clause-bar-fill{height:100%;border-radius:4px;transition:width .5s}
+/* SESSION */
+.session-card{background:#F0FDF4;border-radius:12px;padding:.75rem 1rem;margin-bottom:8px;display:flex;align-items:center;justify-content:space-between}
+.session-left{font-size:13px;color:#2C2C2A;font-weight:600}
+.session-sub{font-size:11px;color:#888;margin-top:2px}
+.session-right{text-align:right;flex-shrink:0;margin-left:8px}
+.session-score{font-size:15px;font-weight:700}
+.session-dur{font-size:11px;color:#888;margin-top:2px}
+/* ANALYSIS */
+.analysis-summary{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:1.25rem}
+.analysis-card{border-radius:12px;padding:1rem;text-align:center}
+.analysis-card.best{background:#DCFCE7}
+.analysis-card.weak{background:#FEF2F2}
+.analysis-card-label{font-size:11px;font-weight:700;margin-bottom:6px}
+.analysis-card.best .analysis-card-label{color:#166534}
+.analysis-card.weak .analysis-card-label{color:#501313}
+.analysis-card-val{font-size:14px;font-weight:700;color:#2C2C2A}
+.analysis-card-pct{font-size:20px;font-weight:700;margin-top:4px}
+.analysis-card.best .analysis-card-pct{color:#16A34A}
+.analysis-card.weak .analysis-card-pct{color:#A32D2D}
+.insight-box{background:#F0FDF4;border-radius:12px;padding:1rem;margin-bottom:1rem;font-size:13px;color:#14532D;line-height:1.6}
+.insight-box strong{font-weight:700}
+/* EDIT */
+.edit-section{background:#F0FDF4;border-radius:14px;padding:1.25rem;margin-bottom:1rem}
+.edit-title{font-size:14px;font-weight:700;color:#2C2C2A;margin-bottom:1rem}
+.save-msg{font-size:13px;text-align:center;margin-top:.75rem;min-height:18px}
+.save-msg.success{color:#166534}.save-msg.error{color:#A32D2D}
+/* MODAL */
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:100;display:flex;align-items:center;justify-content:center;padding:1rem}
+.modal-box{background:#fff;border-radius:20px;padding:1.75rem 1.5rem;max-width:340px;width:100%;text-align:center;box-shadow:0 8px 32px rgba(16,120,60,.18)}
+.modal-icon{font-size:3rem;margin-bottom:.75rem}
+.modal-title{font-size:18px;font-weight:700;color:#2C2C2A;margin-bottom:6px}
+.modal-sub{font-size:13px;color:#888;line-height:1.6;margin-bottom:1.25rem}
+.modal-btn{display:block;background:#166534;color:#fff;border:none;border-radius:12px;padding:12px;font-size:14px;font-weight:700;cursor:pointer;width:100%}
+</style>
+</head>
+<body>
+<div id="app">
+
+<!-- ── AUTH ── -->
+<div id="auth" class="screen active">
+  <div class="auth-wrap">
+    <div class="auth-header">
+      <h1>Chemist <span>Adventure</span></h1>
+      <div class="tagline">Belajar Kimia SMA dengan cara yang seru! 🧪</div>
+    </div>
+    <div class="tab-row">
+      <button class="tab-btn active" onclick="switchTab('login')">Masuk</button>
+      <button class="tab-btn" onclick="switchTab('register')">Daftar</button>
+    </div>
+    <div id="loginForm">
+      <div class="field"><label>Email</label><input type="email" id="loginEmail" placeholder="email@contoh.com"></div>
+      <div class="field"><label>Password</label><input type="password" id="loginPassword" placeholder="Password"></div>
+      <button class="btn-primary" onclick="doLogin()">Masuk</button>
+    </div>
+    <div id="registerForm" style="display:none">
+      <div class="field"><label>Nama</label><input type="text" id="regName" placeholder="Nama lengkap"></div>
+      <div class="field"><label>Email</label><input type="email" id="regEmail" placeholder="email@contoh.com"></div>
+      <div class="field"><label>Password</label><input type="password" id="regPassword" placeholder="Minimal 6 karakter"></div>
+      <button class="btn-primary" onclick="doRegister()">Daftar</button>
+    </div>
+    <div class="auth-msg" id="authMsg"></div>
+  </div>
+</div>
+
+<!-- ── HOME ── -->
+<div id="home" class="screen">
+  <div class="home-header">
+    <h1>Chemist <span>Adventure</span></h1>
+    <div class="tagline">Pilih kelas untuk mulai belajar</div>
+  </div>
+  <div class="user-bar">
+    <div>
+      <div class="user-name" id="userName"></div>
+      <div class="user-lives">
+        <span id="livesDisplay">❤️❤️❤️❤️❤️</span>
+        <span class="lives-timer" id="livesTimer"></span>
+      </div>
+    </div>
+    <div class="user-bar-right">
+      <button class="profile-btn" onclick="showScreen('profile')">👤 Profil</button>
+      <button class="logout-btn" onclick="doLogout()">Keluar</button>
+    </div>
+  </div>
+  <div id="noLivesBanner" style="display:none" class="no-lives-banner">
+    <div class="no-lives-title">💔 Hati habis!</div>
+    <div class="no-lives-sub">Tunggu hati terisi untuk main lagi</div>
+    <div class="no-lives-countdown" id="noLivesCountdown"></div>
+  </div>
+  <!-- GRADE SELECTOR -->
+  <div class="grade-row">
+    <button class="grade-btn active" id="btnGrade10" onclick="switchGrade('grade10')">
+      🔬 Kelas 10<div class="grade-label">Hakikat–Stoikiometri</div>
+    </button>
+    <button class="grade-btn" id="btnGrade11" onclick="switchGrade('grade11')">
+      ⚗️ Kelas 11<div class="grade-label">Segera Hadir</div>
+    </button>
+    <button class="grade-btn" id="btnGrade12" onclick="switchGrade('grade12')">
+      🧬 Kelas 12<div class="grade-label">Koligatif–Makromolekul</div>
+    </button>
+  </div>
+  <div class="nav-row" style="margin-top:.75rem">
+    <button class="nav-btn active" onclick="showTab('worlds')">🗺️ Peta Materi</button>
+    <button class="nav-btn" onclick="showTab('ranking')">🏆 Ranking</button>
+  </div>
+  <div id="tabWorlds">
+    <div class="world-list" id="worldList"><div class="loading">Memuat...</div></div>
+  </div>
+  <div id="tabRanking" style="display:none">
+    <div class="rank-header">
+      <div class="rank-title">🏆 Papan Peringkat</div>
+      <div class="rank-sub">Urutan: level selesai → akurasi → XP</div>
+    </div>
+    <div class="rank-list" id="rankList"><div class="loading">Memuat...</div></div>
+  </div>
+</div>
+
+<!-- ── PROFILE ── -->
+<div id="profile" class="screen">
+  <button class="back-btn" onclick="showScreen('home')">← Kembali</button>
+  <div style="text-align:center;padding:.75rem 0 1rem">
+    <div class="profile-avatar" id="profileAvatar">?</div>
+    <div class="profile-nickname" id="profileNickname"></div>
+    <div class="profile-email" id="profileEmail"></div>
+  </div>
+  <div class="tab-row" style="margin-bottom:1.25rem">
+    <button class="tab-btn active" onclick="switchProfileTab('info')">👤 Profil</button>
+    <button class="tab-btn" onclick="switchProfileTab('stats')">📊 Statistik</button>
+    <button class="tab-btn" onclick="switchProfileTab('analysis')">🧠 Analisis</button>
+  </div>
+  <div id="ptab-info">
+    <div class="profile-lives" style="margin-bottom:1rem">
+      <div class="profile-lives-val" id="profileLivesVal">❤️❤️❤️❤️❤️</div>
+      <div class="profile-lives-label">Hati Tersisa</div>
+    </div>
+    <div class="edit-section">
+      <div class="edit-title">✏️ Edit Profil</div>
+      <div class="field"><label>Nama Lengkap</label><input type="text" id="editName" placeholder="Nama lengkap"></div>
+      <div class="field"><label>Nickname (tampil di ranking)</label><input type="text" id="editNickname" placeholder="Nickname" maxlength="20"></div>
+      <div class="field"><label>Email</label><input type="email" id="editEmail" disabled></div>
+      <button class="btn-primary" onclick="saveProfile()">Simpan</button>
+      <div class="save-msg" id="saveMsg"></div>
+    </div>
+  </div>
+  <div id="ptab-stats" style="display:none">
+    <div class="profile-stats">
+      <div class="stat-card"><div class="stat-val" id="profileXP">0</div><div class="stat-label">Total XP</div></div>
+      <div class="stat-card"><div class="stat-val" id="profileLevels">0</div><div class="stat-label">Level Selesai</div></div>
+      <div class="stat-card"><div class="stat-val" id="profileAccuracy">-</div><div class="stat-label">Akurasi</div></div>
+    </div>
+    <div class="profile-stats" style="margin-top:0">
+      <div class="stat-card"><div class="stat-val" id="profileTotalQ">0</div><div class="stat-label">Total Soal</div></div>
+      <div class="stat-card"><div class="stat-val" id="profileAttempts">0</div><div class="stat-label">Sesi Main</div></div>
+      <div class="stat-card"><div class="stat-val" id="profileDuration" style="font-size:13px;line-height:1.3">-</div><div class="stat-label">Waktu Belajar</div></div>
+    </div>
+    <div class="stat-section" style="margin-top:1rem">
+      <div class="stat-section-title">🕓 Riwayat Sesi Terbaru</div>
+      <div id="recentSessions"><div class="loading">Memuat...</div></div>
+    </div>
+  </div>
+  <div id="ptab-analysis" style="display:none">
+    <div id="analysisContent"><div class="loading">Memuat...</div></div>
+  </div>
+</div>
+
+<!-- ── LEVEL SELECT ── -->
+<div id="levelSelect" class="screen">
+  <button class="back-btn" onclick="showScreen('home')">← Kembali</button>
+  <div id="levelSelectHeader"></div>
+  <div class="level-grid" id="levelGrid"></div>
+</div>
+
+<!-- ── QUIZ ── -->
+<div id="quiz" class="screen">
+  <div class="quiz-header">
+    <div class="hearts" id="hearts"></div>
+    <div class="timer-circle">
+      <svg class="timer-svg" width="44" height="44" viewBox="0 0 44 44">
+        <circle cx="22" cy="22" r="18" fill="none" stroke="#D1FAE5" stroke-width="3.5"/>
+        <circle id="timerArc" cx="22" cy="22" r="18" fill="none" stroke="#166534" stroke-width="3.5"
+          stroke-dasharray="113.1" stroke-dashoffset="0" stroke-linecap="round"/>
+      </svg>
+      <div class="timer-num" id="timerNum">15</div>
+    </div>
+    <div class="xp-badge" id="xpBadge">0 XP</div>
+  </div>
+  <div class="progress-wrap">
+    <div class="progress-label" id="questionNum">Soal 1 dari 10</div>
+    <div class="progress-bar"><div class="progress-fill" id="progressFill" style="width:0%"></div></div>
+  </div>
+  <div class="question-text" id="questionText"></div>
+  <div class="options" id="options"></div>
+  <div class="feedback" id="feedback" style="display:none"></div>
+</div>
+
+<!-- ── GAME OVER ── -->
+<div id="gameover" class="screen">
+  <div class="center-wrap">
+    <div class="big-icon">💔</div>
+    <div class="result-title">Hati habis!</div>
+    <div class="result-sub" id="gameoverSub"></div>
+    <button class="btn-primary" onclick="retryLevel()">Coba Lagi</button>
+    <button class="btn-secondary" onclick="showScreen('levelSelect')">Pilih Level Lain</button>
+    <button class="btn-secondary" style="margin-top:6px" onclick="showScreen('home')">Peta Materi</button>
+  </div>
+</div>
+
+<!-- ── RESULT ── -->
+<div id="result" class="screen">
+  <div class="center-wrap">
+    <div class="big-icon" id="resultIcon"></div>
+    <div class="result-title" id="resultTitle"></div>
+    <div class="score-display" id="resultScore"></div>
+    <div class="stars" id="resultStars"></div>
+    <div id="resultBadge"></div>
+    <div class="xp-earned" id="resultXP"></div>
+    <div class="result-sub" id="resultSub"></div>
+    <div class="result-sub" id="resultDuration" style="font-size:13px;color:#888"></div>
+    <button class="btn-primary" id="nextLevelBtn" onclick="goNextLevel()" style="display:none">Materi Berikutnya →</button>
+    <button class="btn-primary" id="retryBtn" onclick="retryLevel()">Main Lagi</button>
+    <button class="btn-secondary" onclick="showScreen('levelSelect')">Pilih Level Lain</button>
+    <button class="btn-secondary" style="margin-top:6px" onclick="showScreen('home')">Peta Materi</button>
+  </div>
+</div>
+
+<!-- ── MODAL ── -->
+<div id="modalOverlay" class="modal-overlay" style="display:none" onclick="closeModal(event)">
+  <div class="modal-box">
+    <div class="modal-icon" id="modalIcon">🔒</div>
+    <div class="modal-title" id="modalTitle"></div>
+    <div class="modal-sub" id="modalSub"></div>
+    <button class="modal-btn" onclick="hideModal()">Mengerti</button>
+  </div>
+</div>
+
+</div><!-- #app -->
+
+<script>
+const SUPABASE_URL='https://dlvtmarvlqclkvomsnwa.supabase.co';
+const SUPABASE_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRsdnRtYXJ2bHFjbGt2b21zbndhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODI0NDQ3NzEsImV4cCI6MjA5ODAyMDc3MX0.sTVVoAc6J6i13yhkQdFtH2JchstTEeV1w0RKO169OVk';
+const sb=supabase.createClient(SUPABASE_URL,SUPABASE_KEY);
+
+const WORLD_COLORS=['#166534','#0F766E','#1D4ED8','#7C3AED','#BE185D','#B45309','#0369A1','#15803D','#9A3412'];
+const WORLD_BG=['#DCFCE7','#CCFBF1','#DBEAFE','#EDE9FE','#FCE7F3','#FEF3C7','#E0F2FE','#F0FDF4','#FFF7ED'];
+const MAX_LIVES=5, LIFE_REGEN_MS=10*60*1000;
+
+let currentUser=null, worlds=[], allLevels=[], allProgress=[], userProfile=null;
+let currentWorld=null, currentLevel=null, currentWorldIndex=0;
+let shuffledQuestions=[], currentQ=0, levelHearts=3, xp=0, correct=0;
+let timerVal=15, timerInterval=null, answered=false, livesTimerInterval=null;
+let sessionAnswers=[], currentAttemptId=null;
+let levelStartedAt=null, questionStartedAt=null;
+let currentGrade='grade10';
+let allAttempts=[];
+let profileTabLoaded={stats:false,analysis:false};
+
+// ── SCREEN ────────────────────────────────────────
+function showScreen(id){
+  document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+  window.scrollTo(0,0);
+  if(id==='profile')renderProfile();
+}
+
+// ── MODAL ─────────────────────────────────────────
+function showModal(icon,title,sub){
+  document.getElementById('modalIcon').textContent=icon;
+  document.getElementById('modalTitle').textContent=title;
+  document.getElementById('modalSub').textContent=sub;
+  document.getElementById('modalOverlay').style.display='flex';
+}
+function hideModal(){document.getElementById('modalOverlay').style.display='none';}
+function closeModal(e){if(e.target.id==='modalOverlay')hideModal();}
+
+// ── AUTH ──────────────────────────────────────────
+function switchTab(tab){
+  document.querySelectorAll('#auth .tab-btn').forEach((b,i)=>{
+    b.classList.toggle('active',(i===0&&tab==='login')||(i===1&&tab==='register'));
+  });
+  document.getElementById('loginForm').style.display=tab==='login'?'block':'none';
+  document.getElementById('registerForm').style.display=tab==='register'?'block':'none';
+  setAuthMsg('','');
+}
+function setAuthMsg(msg,type){
+  const el=document.getElementById('authMsg');
+  el.textContent=msg;el.className='auth-msg '+(type||'');
+}
+async function doLogin(){
+  const email=document.getElementById('loginEmail').value.trim();
+  const pass=document.getElementById('loginPassword').value;
+  if(!email||!pass){setAuthMsg('Isi email dan password.','error');return;}
+  setAuthMsg('Memproses...','');
+  const {data,error}=await sb.auth.signInWithPassword({email,password:pass});
+  if(error){setAuthMsg(error.message,'error');return;}
+  currentUser=data.user;await afterLogin();
+}
+async function doRegister(){
+  const name=document.getElementById('regName').value.trim();
+  const email=document.getElementById('regEmail').value.trim();
+  const pass=document.getElementById('regPassword').value;
+  if(!name||!email||!pass){setAuthMsg('Semua kolom wajib diisi.','error');return;}
+  if(pass.length<6){setAuthMsg('Password minimal 6 karakter.','error');return;}
+  setAuthMsg('Mendaftar...','');
+  const {error}=await sb.auth.signUp({email,password:pass,options:{data:{full_name:name}}});
+  if(error){setAuthMsg(error.message,'error');return;}
+  const {data:sess}=await sb.auth.signInWithPassword({email,password:pass});
+  if(sess?.user){
+    const autoNick=name.slice(0,3)+'***';
+    await sb.from('profiles').upsert({id:sess.user.id,full_name:name,nickname:autoNick,lives:MAX_LIVES},{onConflict:'id'});
+    currentUser=sess.user;await afterLogin();
+  } else {
+    setAuthMsg('Berhasil! Silakan masuk.','success');switchTab('login');
+  }
+}
+async function doLogout(){
+  clearInterval(livesTimerInterval);
+  await sb.auth.signOut();
+  currentUser=null;worlds=[];allLevels=[];allProgress=[];userProfile=null;
+  showScreen('auth');
+}
+async function afterLogin(){await loadData();showScreen('home');}
+
+// ── DATA ──────────────────────────────────────────
+async function loadData(){
+  const [w,l,p,prof,att]=await Promise.all([
+    sb.from('worlds').select('*').order('order_num'),
+    sb.from('levels').select('*').order('order_num'),
+    sb.from('user_progress').select('*').eq('user_id',currentUser.id),
+    sb.from('profiles').select('*').eq('id',currentUser.id).single(),
+    sb.from('attempts').select('score,level_id').eq('user_id',currentUser.id)
+  ]);
+  worlds=w.data||[];allLevels=l.data||[];allProgress=p.data||[];allAttempts=att.data||[];
+  userProfile=prof.data||{lives:MAX_LIVES,last_life_lost:null,full_name:'',nickname:''};
+  if(!prof.data){
+    const name=currentUser.user_metadata?.full_name||'';
+    const autoNick=name.slice(0,3)+'***';
+    await sb.from('profiles').upsert({id:currentUser.id,full_name:name,nickname:autoNick,lives:MAX_LIVES},{onConflict:'id'});
+    userProfile={lives:MAX_LIVES,last_life_lost:null,full_name:name,nickname:autoNick};
+  }
+  if(!userProfile.nickname){
+    const autoNick=(userProfile.full_name||'').slice(0,3)+'***';
+    userProfile.nickname=autoNick;
+    await sb.from('profiles').update({nickname:autoNick}).eq('id',currentUser.id);
+  }
+  regenLives();
+  const displayName=userProfile.full_name||currentUser.user_metadata?.full_name||currentUser.email;
+  document.getElementById('userName').textContent='👋 '+displayName;
+  renderHome();startLivesTimer();
+}
+
+// ── LIVES ──────────────────────────────────────────
+function regenLives(){
+  if(!userProfile)return;
+  let lives=userProfile.lives??MAX_LIVES;
+  if(lives>=MAX_LIVES)return;
+  const lastLost=userProfile.last_life_lost?new Date(userProfile.last_life_lost):null;
+  if(!lastLost)return;
+  const elapsed=Date.now()-lastLost.getTime();
+  const regen=Math.floor(elapsed/LIFE_REGEN_MS);
+  if(regen>0){
+    lives=Math.min(MAX_LIVES,lives+regen);
+    userProfile.lives=lives;
+    const newLastLost=lives>=MAX_LIVES?null:new Date(lastLost.getTime()+regen*LIFE_REGEN_MS).toISOString();
+    userProfile.last_life_lost=newLastLost;
+    sb.from('profiles').update({lives,last_life_lost:newLastLost}).eq('id',currentUser.id);
+  }
+}
+function getLives(){return userProfile?.lives??MAX_LIVES;}
+function msUntilNextLife(){
+  if(!userProfile?.last_life_lost)return 0;
+  const lastLost=new Date(userProfile.last_life_lost).getTime();
+  return LIFE_REGEN_MS-((Date.now()-lastLost)%LIFE_REGEN_MS);
+}
+function formatDuration(sec){
+  if(!sec||sec<0)return'0:00';
+  const h=Math.floor(sec/3600),m=Math.floor((sec%3600)/60),s=sec%60;
+  if(h>0)return`${h}:${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;
+  return`${m}:${String(s).padStart(2,'0')}`;
+}
+function formatCountdown(ms){
+  const total=Math.ceil(ms/1000),m=Math.floor(total/60),s=total%60;
+  return`${m}:${s.toString().padStart(2,'0')}`;
+}
+function startLivesTimer(){
+  clearInterval(livesTimerInterval);
+  livesTimerInterval=setInterval(()=>{regenLives();renderLivesUI();},1000);
+}
+function renderLivesUI(){
+  const lives=getLives();
+  const livesEl=document.getElementById('livesDisplay');
+  const timerEl=document.getElementById('livesTimer');
+  const banner=document.getElementById('noLivesBanner');
+  const countdown=document.getElementById('noLivesCountdown');
+  if(livesEl)livesEl.textContent=Array.from({length:MAX_LIVES},(_,i)=>i<lives?'❤️':'🤍').join('');
+  if(timerEl)timerEl.textContent=lives<MAX_LIVES&&lives>0?`+1 dalam ${formatCountdown(msUntilNextLife())}`:'';
+  if(banner){
+    banner.style.display=lives<=0?'block':'none';
+    if(lives<=0&&countdown)countdown.textContent=formatCountdown(msUntilNextLife());
+  }
+}
+async function loseMainLife(){
+  if(!userProfile)return;
+  const lives=Math.max(0,(userProfile.lives??MAX_LIVES)-1);
+  const last_life_lost=new Date().toISOString();
+  userProfile.lives=lives;userProfile.last_life_lost=last_life_lost;
+  await sb.from('profiles').update({lives,last_life_lost}).eq('id',currentUser.id);
+  renderLivesUI();
+}
+
+// ── XP & STATS ────────────────────────────────────
+function getTotalXP(){return allAttempts.reduce((sum,a)=>sum+(a.score*10),0);}
+function getLevelsCompleted(){return allProgress.filter(p=>p.best_score>=8).length;}
+
+// ── UTIL ──────────────────────────────────────────
+function getProgress(levelId){return allProgress.find(p=>p.level_id===levelId)||null;}
+function getLevelsForWorld(worldId){return allLevels.filter(l=>l.world_id===worldId);}
+
+function isBossLevel(level){
+  const worldLevels=getLevelsForWorld(level.world_id);
+  const maxOrder=Math.max(...worldLevels.map(l=>l.order_num));
+  return level.order_num===maxOrder&&worldLevels.length>=3;
+}
+function passingScore(level){return isBossLevel(level)?12:8;}
+function getLevelConfig(level){
+  if(isBossLevel(level))return{maxQ:15,passing:12};
+  return{maxQ:10,passing:8};
+}
+
+// ── UNLOCK LOGIC ──────────────────────────────────
+// Semua world terbuka per grade, level harus urut
+function isWorldUnlocked(world){
+  return true; // semua world terbuka, kecuali grade11 belum ada soal
+}
+
+function isLevelUnlocked(level,worldLevels){
+  if(!level.is_active)return false;
+  if(level.order_num===1)return true;
+  const prev=worldLevels.find(l=>l.order_num===level.order_num-1);
+  if(!prev)return true;
+  const p=getProgress(prev.id);
+  return p&&p.best_score>=passingScore(prev);
+}
+
+// ── TABS (HOME) ───────────────────────────────────
+function switchGrade(grade){
+  currentGrade=grade;
+  ['grade10','grade11','grade12'].forEach(g=>{
+    document.getElementById('btnGrade'+g.replace('grade','')).classList.toggle('active',g===grade);
+  });
+  renderHome();
+}
+function showTab(tab){
+  document.querySelectorAll('.nav-btn').forEach((b,i)=>{
+    b.classList.toggle('active',(i===0&&tab==='worlds')||(i===1&&tab==='ranking'));
+  });
+  document.getElementById('tabWorlds').style.display=tab==='worlds'?'block':'none';
+  document.getElementById('tabRanking').style.display=tab==='ranking'?'block':'none';
+  if(tab==='ranking')loadRanking();
+}
+
+// ── HOME ──────────────────────────────────────────
+function renderHome(){
+  renderLivesUI();
+  const list=document.getElementById('worldList');
+  list.innerHTML='';
+
+  const filteredWorlds=worlds
+    .filter(w=>w.grade===currentGrade)
+    .sort((a,b)=>a.order_num-b.order_num);
+
+  if(filteredWorlds.length===0){
+    list.innerHTML=`<div style="text-align:center;padding:2rem;color:#888">
+      <div style="font-size:2.5rem;margin-bottom:1rem">⚗️</div>
+      <div style="font-size:14px;font-weight:600;color:#2C2C2A;margin-bottom:6px">Kelas 11</div>
+      <div style="font-size:13px">Konten sedang disiapkan. Segera hadir!</div>
+    </div>`;
+    return;
+  }
+
+  const gradeWorlds=worlds.filter(w=>w.grade===currentGrade).sort((a,b)=>a.order_num-b.order_num);
+
+  filteredWorlds.forEach(world=>{
+    const colorIdx=gradeWorlds.findIndex(w=>w.id===world.id);
+    const levels=getLevelsForWorld(world.id);
+    const activeLevels=levels.filter(l=>l.is_active);
+    const done=activeLevels.filter(l=>{const p=getProgress(l.id);return p&&p.best_score>=passingScore(l);});
+    const color=WORLD_COLORS[colorIdx%WORLD_COLORS.length]||'#166534';
+    const bg=WORLD_BG[colorIdx%WORLD_BG.length]||'#DCFCE7';
+    const isGrade11=currentGrade==='grade11';
+
+    const card=document.createElement('div');
+    card.className='world-card';
+    card.style.borderTop=`3px solid ${color}`;
+
+    let dotsHtml='';
+    if(isGrade11){
+      dotsHtml=`<span class="coming-soon-badge">⏳ Segera Hadir</span>`;
+    } else {
+      dotsHtml=levels.map(l=>{
+        const p=getProgress(l.id);
+        const isDone=p&&p.best_score>=passingScore(l);
+        const isUnlocked=isLevelUnlocked(l,levels);
+        const cls=isDone?'done':isUnlocked?'unlocked':'locked';
+        return`<div class="level-dot ${cls}" title="${l.name}">${isDone?'✓':l.order_num}</div>`;
+      }).join('');
+    }
+
+    const progressText=isGrade11?'':''+done.length+'/'+activeLevels.length;
+
+    card.innerHTML=`<div class="world-header">
+      <div class="world-icon">${world.icon||'📚'}</div>
+      <div class="world-info">
+        <div class="world-name">${world.name}</div>
+        <div class="world-desc">${world.description||''}</div>
+      </div>
+      ${!isGrade11?`<div class="world-progress" style="background:${bg};color:${color}">${progressText}</div>`:''}
+    </div>
+    <div class="world-levels">${dotsHtml}</div>`;
+
+    if(!isGrade11){
+      card.onclick=()=>openWorld(world,colorIdx);
+    } else {
+      card.onclick=()=>showModal('⏳',world.name+' — Segera Hadir','Materi kelas 11 sedang disiapkan. Nantikan updatenya ya!');
+    }
+    list.appendChild(card);
+  });
+}
+
+// ── LEVEL SELECT ──────────────────────────────────
+function openWorld(world,colorIdx){
+  currentWorld=world;currentWorldIndex=colorIdx;
+  const color=WORLD_COLORS[colorIdx%WORLD_COLORS.length]||'#166534';
+  const levels=getLevelsForWorld(world.id);
+  document.getElementById('levelSelectHeader').innerHTML=`
+    <div style="text-align:center;padding:.5rem 0 1.25rem">
+      <div style="font-size:2.5rem">${world.icon||'📚'}</div>
+      <div style="font-size:18px;font-weight:700;color:#2C2C2A;margin-top:6px">${world.name}</div>
+      <div style="font-size:12px;color:#888;margin-top:4px">${world.description||''}</div>
+      ${world.subtitle?`<div style="display:inline-block;margin-top:8px;background:#F0FDF4;border:1px solid #D1FAE5;border-radius:20px;padding:4px 14px;font-size:11px;font-weight:700;color:#166534;letter-spacing:.3px">${world.subtitle}</div>`:''}
+    </div>`;
+  renderLevelGrid(levels,color);
+  showScreen('levelSelect');
+}
+
+function renderLevelGrid(levels,color){
+  const noLives=getLives()<=0;
+  const grid=document.getElementById('levelGrid');
+  grid.innerHTML='';
+  levels.forEach(level=>{
+    const p=getProgress(level.id);
+    const isBoss=isBossLevel(level);
+    const cfg=getLevelConfig(level);
+    const done=p&&p.best_score>=cfg.passing;
+    const unlocked=isLevelUnlocked(level,levels);
+    const hasQ=level.is_active;
+    const blocked=unlocked&&hasQ&&noLives;
+    const card=document.createElement('div');
+    card.className='level-card '+(done?'lc-done':unlocked&&hasQ&&!noLives?'lc-unlocked':'lc-locked');
+    const stars=done?(p.best_score>=cfg.maxQ?'⭐⭐⭐':p.best_score>=(cfg.passing+1)?'⭐⭐':'⭐'):'';
+    let badgeTxt,badgeBg,badgeColor;
+    if(done){badgeTxt=`${stars} ${p.best_score}/${cfg.maxQ}`;badgeBg='#DCFCE7';badgeColor='#166534';}
+    else if(blocked){badgeTxt='💔 Hati habis';badgeBg='#FEF2F2';badgeColor='#A32D2D';}
+    else if(unlocked&&hasQ){badgeTxt=isBoss?'⚔️ Boss →':'Mulai →';badgeBg='#FEF9C3';badgeColor=color;}
+    else if(unlocked&&!hasQ){badgeTxt='Segera hadir';badgeBg='#F0FDF4';badgeColor='#888';}
+    else{badgeTxt='🔒';badgeBg='#F0FDF4';badgeColor='#888';}
+    const bossLabel=isBoss?`<div style="font-size:9px;color:${color};font-weight:700;margin-bottom:2px;letter-spacing:.5px">⚔️ BOSS</div>`:'';
+    card.innerHTML=`${bossLabel}
+      <div class="lc-num" style="color:${color}">Level ${level.order_num}</div>
+      <div class="lc-name">${level.name}</div>
+      <div class="lc-badge" style="background:${badgeBg};color:${badgeColor}">${badgeTxt}</div>`;
+    if(unlocked&&hasQ&&!noLives)card.onclick=()=>startLevel(level);
+    grid.appendChild(card);
+  });
+}
+
+// ── QUIZ ──────────────────────────────────────────
+function shuffle(arr){
+  const a=[...arr];
+  for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]];}
+  return a;
+}
+
+async function startLevel(level){
+  if(getLives()<=0){alert('Hati habis!');return;}
+  currentLevel=level;currentQ=0;levelHearts=3;xp=0;correct=0;
+  sessionAnswers=[];currentAttemptId=null;levelStartedAt=Date.now();
+  const cfg=getLevelConfig(level);
+  const {data}=await sb.from('questions').select('*').eq('level_id',level.id);
+  if(!data||data.length===0){
+    showModal('📝','Soal Belum Tersedia','Soal untuk level ini sedang disiapkan. Coba lagi nanti ya!');
+    return;
+  }
+  const picked=shuffle(data).slice(0,cfg.maxQ);
+  shuffledQuestions=picked.map(q=>{
+    const opts=[...q.options];
+    const correctOpt=opts[q.correct_index];
+    const shuffledOpts=shuffle(opts);
+    return{...q,options:shuffledOpts,correct_index:shuffledOpts.indexOf(correctOpt),orig_id:q.id};
+  });
+  showScreen('quiz');renderQuestion();
+}
+
+function renderHearts(){
+  document.getElementById('hearts').innerHTML=Array.from({length:3},(_,i)=>i<levelHearts?'❤️':'🤍').join('');
+}
+
+function renderQuestion(){
+  const q=shuffledQuestions[currentQ];
+  answered=false;questionStartedAt=Date.now();
+  document.getElementById('questionNum').textContent=`Soal ${currentQ+1} dari ${shuffledQuestions.length}`;
+  document.getElementById('questionText').textContent=q.question;
+  document.getElementById('progressFill').style.width=`${(currentQ/shuffledQuestions.length)*100}%`;
+  document.getElementById('xpBadge').textContent=`${xp} XP`;
+  document.getElementById('feedback').style.display='none';
+  renderHearts();
+  const opts=document.getElementById('options');
+  opts.innerHTML='';
+  ['A','B','C','D'].forEach((letter,i)=>{
+    if(i>=q.options.length)return;
+    const btn=document.createElement('button');
+    btn.className='option-btn';
+    btn.innerHTML=`<span class="opt-letter">${letter}</span>${q.options[i]}`;
+    btn.onclick=()=>selectAnswer(i);
+    opts.appendChild(btn);
+  });
+  startTimer();
+}
+
+function startTimer(){
+  clearInterval(timerInterval);timerVal=15;updateTimerUI();
+  timerInterval=setInterval(()=>{timerVal--;updateTimerUI();if(timerVal<=0){clearInterval(timerInterval);timeUp();}},1000);
+}
+function updateTimerUI(){
+  document.getElementById('timerNum').textContent=timerVal;
+  const arc=document.getElementById('timerArc');
+  arc.style.strokeDashoffset=113.1*(1-timerVal/15);
+  arc.style.stroke=timerVal<=5?'#E24B4A':'#166534';
+}
+function timeUp(){
+  if(answered)return;
+  answered=true;levelHearts--;renderHearts();
+  const q=shuffledQuestions[currentQ];
+  sessionAnswers.push({question_id:q.orig_id,selected_index:-1,is_correct:false,response_time_seconds:15});
+  showFeedback(false,null,true);disableOptions();
+  if(levelHearts<=0){setTimeout(()=>showGameOver(),1300);return;}
+  setTimeout(nextQuestion,1600);
+}
+function selectAnswer(idx){
+  if(answered)return;
+  answered=true;clearInterval(timerInterval);
+  const q=shuffledQuestions[currentQ];
+  const isCorrect=idx===q.correct_index;
+  const rt=Math.round((Date.now()-questionStartedAt)/1000);
+  sessionAnswers.push({question_id:q.orig_id,selected_index:idx,is_correct:isCorrect,response_time_seconds:rt});
+  const btns=document.querySelectorAll('.option-btn');
+  btns[idx].classList.add(isCorrect?'correct':'wrong');
+  if(!isCorrect)btns[q.correct_index].classList.add('correct');
+  disableOptions();
+  if(isCorrect){xp+=10;correct++;showFeedback(true,null,false);}
+  else{levelHearts--;renderHearts();showFeedback(false,q.options[q.correct_index],false);}
+  document.getElementById('xpBadge').textContent=`${xp} XP`;
+  if(levelHearts<=0){setTimeout(()=>showGameOver(),1300);return;}
+  setTimeout(nextQuestion,1600);
+}
+function showFeedback(isCorrect,correctAnswer,isTimeout){
+  const fb=document.getElementById('feedback');fb.style.display='block';
+  if(isCorrect){fb.className='feedback correct';fb.textContent='✅ Benar! +10 XP';}
+  else if(isTimeout){fb.className='feedback wrong';fb.textContent='⏰ Waktu habis! Hati berkurang.';}
+  else{fb.className='feedback wrong';fb.textContent=`❌ Jawaban benar: ${correctAnswer}`;}
+}
+function disableOptions(){document.querySelectorAll('.option-btn').forEach(b=>b.disabled=true);}
+function nextQuestion(){currentQ++;if(currentQ>=shuffledQuestions.length){showResult();return;}renderQuestion();}
+
+async function saveAttempt(score,heartsLeft){
+  const cfg=getLevelConfig(currentLevel);
+  const duration=levelStartedAt?Math.round((Date.now()-levelStartedAt)/1000):null;
+  const {data}=await sb.from('attempts').insert({
+    user_id:currentUser.id,level_id:currentLevel.id,score,
+    max_score:cfg.maxQ,hearts_left:heartsLeft,
+    started_at:levelStartedAt?new Date(levelStartedAt).toISOString():null,
+    duration_seconds:duration,played_at:new Date().toISOString()
+  }).select('id').single();
+  if(data)currentAttemptId=data.id;
+  if(currentAttemptId&&sessionAnswers.length>0){
+    const rows=sessionAnswers.map(a=>({
+      user_id:currentUser.id,attempt_id:currentAttemptId,
+      question_id:a.question_id,selected_index:a.selected_index,
+      is_correct:a.is_correct,response_time_seconds:a.response_time_seconds??null,
+      answered_at:new Date().toISOString()
+    }));
+    await sb.from('user_answers').insert(rows);
+  }
+}
+
+async function showGameOver(){
+  clearInterval(timerInterval);
+  await Promise.all([loseMainLife(),saveAttempt(correct,0)]);
+  document.getElementById('gameoverSub').textContent=
+    `Soal ${currentQ+1} • ${correct} jawaban benar • Hati: ${getLives()}/${MAX_LIVES}`;
+  showScreen('gameover');
+}
+
+async function showResult(){
+  clearInterval(timerInterval);
+  const cfg=getLevelConfig(currentLevel);
+  const {passing,maxQ}=cfg;
+  const passed=correct>=passing;
+  const pct=correct/maxQ;
+  const stars=correct>=maxQ?'⭐⭐⭐':pct>=0.9?'⭐⭐':correct>=passing?'⭐':'';
+  const icon=pct>=0.9?'🎉':correct>=passing?'👍':pct>=0.5?'📚':'💪';
+  const msg=pct>=0.9?'Luar biasa!':correct>=passing?'Level selesai!':pct>=0.5?'Hampir! Coba lagi.':'Terus semangat!';
+  document.getElementById('resultIcon').textContent=icon;
+  document.getElementById('resultTitle').textContent=msg;
+  document.getElementById('resultScore').textContent=`${correct}/${maxQ}`;
+  document.getElementById('resultStars').textContent=stars;
+  document.getElementById('resultXP').textContent=`+${xp} XP diperoleh`;
+  document.getElementById('resultSub').textContent=currentLevel.name;
+  const dur=levelStartedAt?Math.round((Date.now()-levelStartedAt)/1000):null;
+  document.getElementById('resultDuration').textContent=dur?`⏱️ Waktu: ${formatDuration(dur)}`:'';
+  document.getElementById('resultBadge').innerHTML=passed
+    ?`<div class="pass-badge">✅ Level selesai! Level berikutnya terbuka</div>`
+    :`<div class="fail-badge">Butuh ${passing}/${maxQ} untuk lanjut. Semangat!</div>`;
+  const nextBtn=document.getElementById('nextLevelBtn');
+  const retryBtn=document.getElementById('retryBtn');
+  if(passed){
+    const levels=getLevelsForWorld(currentWorld.id);
+    const nextLevel=levels.find(l=>l.order_num===currentLevel.order_num+1&&l.is_active);
+    if(nextLevel&&getLives()>0){nextBtn.style.display='block';retryBtn.style.display='none';}
+    else{nextBtn.style.display='none';retryBtn.style.display='block';}
+  } else {
+    nextBtn.style.display='none';retryBtn.style.display='block';
+  }
+  await Promise.all([saveAttempt(correct,levelHearts),saveProgress(correct,passed,passing)]);
+  await loadData();
+  showScreen('result');
+}
+
+function goNextLevel(){
+  const levels=getLevelsForWorld(currentWorld.id);
+  const nextLevel=levels.find(l=>l.order_num===currentLevel.order_num+1&&l.is_active);
+  if(nextLevel&&getLives()>0)startLevel(nextLevel);
+  else openWorld(currentWorld,currentWorldIndex);
+}
+
+async function saveProgress(score,completed,passing){
+  const existing=getProgress(currentLevel.id);
+  const bestScore=existing?Math.max(existing.best_score,score):score;
+  const pass=passing||8;
+  await sb.from('user_progress').upsert({
+    user_id:currentUser.id,level_id:currentLevel.id,
+    best_score:bestScore,completed:bestScore>=pass||(existing?.completed||false)
+  },{onConflict:'user_id,level_id'});
+}
+
+function retryLevel(){startLevel(currentLevel);}
+
+// ── PROFILE ───────────────────────────────────────
+function switchProfileTab(tab){
+  ['info','stats','analysis'].forEach(t=>{
+    document.getElementById('ptab-'+t).style.display=t===tab?'block':'none';
+  });
+  document.querySelectorAll('#profile .tab-btn').forEach((b,i)=>{
+    b.classList.toggle('active',['info','stats','analysis'][i]===tab);
+  });
+  if(tab==='stats'&&!profileTabLoaded.stats){loadProfileStats();profileTabLoaded.stats=true;}
+  if(tab==='analysis'&&!profileTabLoaded.analysis){loadProfileAnalysis();profileTabLoaded.analysis=true;}
+}
+
+function renderProfile(){
+  profileTabLoaded={stats:false,analysis:false};
+  switchProfileTab('info');
+  const name=userProfile?.full_name||currentUser.user_metadata?.full_name||'';
+  const nick=userProfile?.nickname||(name.slice(0,3)+'***');
+  const lives=getLives();
+  document.getElementById('profileAvatar').textContent=nick.slice(0,2).toUpperCase();
+  document.getElementById('profileNickname').textContent=nick;
+  document.getElementById('profileEmail').textContent=currentUser.email;
+  document.getElementById('profileLivesVal').textContent=Array.from({length:MAX_LIVES},(_,i)=>i<lives?'❤️':'🤍').join('');
+  document.getElementById('editName').value=name;
+  document.getElementById('editNickname').value=nick;
+  document.getElementById('editEmail').value=currentUser.email;
+  document.getElementById('saveMsg').textContent='';
+  document.getElementById('profileXP').textContent=getTotalXP();
+  document.getElementById('profileLevels').textContent=getLevelsCompleted();
+}
+
+async function loadProfileStats(){
+  const [attAns,attCount,durData]=await Promise.all([
+    sb.from('user_answers').select('is_correct').eq('user_id',currentUser.id),
+    sb.from('attempts').select('id',{count:'exact'}).eq('user_id',currentUser.id),
+    sb.from('attempts').select('duration_seconds').eq('user_id',currentUser.id)
+  ]);
+  const attData=attAns.data||[];
+  const totalQ=attData.length;
+  const totalCorrect=attData.filter(a=>a.is_correct).length;
+  const accuracy=totalQ>0?Math.round(totalCorrect/totalQ*100):0;
+  const totalAttempts=attCount.data?.length||0;
+  const totalSec=(durData.data||[]).reduce((s,r)=>s+(r.duration_seconds||0),0);
+  document.getElementById('profileTotalQ').textContent=totalQ;
+  document.getElementById('profileAttempts').textContent=totalAttempts;
+  document.getElementById('profileAccuracy').textContent=totalQ>0?accuracy+'%':'-';
+  document.getElementById('profileDuration').textContent=formatDuration(totalSec);
+
+  const {data:sessions}=await sb.from('attempts')
+    .select('score,max_score,duration_seconds,played_at,level_id')
+    .eq('user_id',currentUser.id)
+    .order('played_at',{ascending:false}).limit(5);
+  const sessEl=document.getElementById('recentSessions');
+  if(!sessions||sessions.length===0){
+    sessEl.innerHTML='<div style="font-size:13px;color:#888;text-align:center;padding:1rem">Belum ada sesi.</div>';return;
+  }
+  sessEl.innerHTML=sessions.map(s=>{
+    const lv=allLevels.find(l=>l.id===s.level_id);
+    const w=lv?worlds.find(w=>w.id===lv.world_id):null;
+    const label=lv?`${w?.icon||'📚'} ${lv.name}`:'Level tidak diketahui';
+    const date=new Date(s.played_at).toLocaleDateString('id-ID',{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'});
+    const dur=s.duration_seconds?`⏱️ ${formatDuration(s.duration_seconds)}`:'';
+    const pct=s.max_score>0?Math.round(s.score/s.max_score*100):0;
+    const scoreColor=pct>=80?'#166534':pct>=60?'#B45309':'#A32D2D';
+    return`<div class="session-card">
+      <div class="session-left">${label}<div class="session-sub">${date}</div></div>
+      <div class="session-right">
+        <div class="session-score" style="color:${scoreColor}">${s.score}/${s.max_score}</div>
+        <div class="session-dur">${dur}</div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+async function loadProfileAnalysis(){
+  const el=document.getElementById('analysisContent');
+  const {data:attData}=await sb.from('user_answers')
+    .select('is_correct,question_id').eq('user_id',currentUser.id);
+  if(!attData||attData.length===0){
+    el.innerHTML='<div style="font-size:13px;color:#888;text-align:center;padding:2rem">Belum ada data. Mainkan beberapa level dulu!</div>';return;
+  }
+  const qIds=[...new Set(attData.map(a=>a.question_id))];
+  const {data:qData}=await sb.from('questions').select('id,level_id').in('id',qIds);
+  const qMap={};(qData||[]).forEach(q=>{qMap[q.id]=q.level_id;});
+  const lvMap={};allLevels.forEach(l=>{lvMap[l.id]=l.world_id;});
+  const worldStats={};
+  attData.forEach(a=>{
+    const wId=lvMap[qMap[a.question_id]];if(!wId)return;
+    if(!worldStats[wId]){worldStats[wId]={correct:0,total:0};}
+    worldStats[wId].total++;if(a.is_correct)worldStats[wId].correct++;
+  });
+  const entries=worlds.map((w,wi)=>({w,wi,
+    pct:worldStats[w.id]?Math.round(worldStats[w.id].correct/worldStats[w.id].total*100):null
+  })).filter(e=>e.pct!==null);
+  if(entries.length===0){
+    el.innerHTML='<div style="font-size:13px;color:#888;text-align:center;padding:2rem">Belum cukup data.</div>';return;
+  }
+  const best=entries.reduce((a,b)=>a.pct>=b.pct?a:b);
+  const weak=entries.length>1?entries.reduce((a,b)=>a.pct<=b.pct?a:b):null;
+  let insight='';
+  if(best.pct>=90)insight+=`Kamu sangat menguasai <strong>${best.w.name}</strong> dengan akurasi ${best.pct}%. `;
+  else if(best.pct>=70)insight+=`Kamu cukup baik di <strong>${best.w.name}</strong> (${best.pct}%). `;
+  else insight+=`Terus tingkatkan kemampuan di semua materi! `;
+  if(weak&&weak.pct<60)insight+=`Fokus latihan di <strong>${weak.w.name}</strong> — akurasi ${weak.pct}% masih perlu ditingkatkan.`;
+  else if(weak)insight+=`Semua materi sudah cukup baik. Pertahankan!`;
+  el.innerHTML=`
+    ${entries.length>=2?`<div class="analysis-summary">
+      <div class="analysis-card best">
+        <div class="analysis-card-label">🏆 Terkuat</div>
+        <div class="analysis-card-val">${best.w.icon||''} ${best.w.name}</div>
+        <div class="analysis-card-pct">${best.pct}%</div>
+      </div>
+      ${weak?`<div class="analysis-card weak">
+        <div class="analysis-card-label">💪 Perlu Latihan</div>
+        <div class="analysis-card-val">${weak.w.icon||''} ${weak.w.name}</div>
+        <div class="analysis-card-pct">${weak.pct}%</div>
+      </div>`:''}
+    </div>`:''}
+    ${insight?`<div class="insight-box">${insight}</div>`:''}
+    <div class="stat-section-title" style="margin-bottom:10px">📊 Akurasi per Materi</div>
+    ${entries.map(({w,wi,pct})=>{
+      const color=WORLD_COLORS[wi%WORLD_COLORS.length]||'#166534';
+      return`<div class="clause-bar-wrap">
+        <div class="clause-bar-header">
+          <span class="clause-bar-name">${w.icon||''} ${w.name}</span>
+          <span class="clause-bar-pct" style="color:${color}">${pct}%</span>
+        </div>
+        <div class="clause-bar-bg"><div class="clause-bar-fill" style="width:${pct}%;background:${color}"></div></div>
+      </div>`;
+    }).join('')}`;
+}
+
+async function saveProfile(){
+  const name=document.getElementById('editName').value.trim();
+  const nick=document.getElementById('editNickname').value.trim();
+  if(!name||!nick){document.getElementById('saveMsg').textContent='Nama dan nickname wajib diisi.';document.getElementById('saveMsg').className='save-msg error';return;}
+  if(nick.length<3){document.getElementById('saveMsg').textContent='Nickname minimal 3 karakter.';document.getElementById('saveMsg').className='save-msg error';return;}
+  const {error}=await sb.from('profiles').update({full_name:name,nickname:nick}).eq('id',currentUser.id);
+  if(error){document.getElementById('saveMsg').textContent='Gagal menyimpan.';document.getElementById('saveMsg').className='save-msg error';return;}
+  userProfile.full_name=name;userProfile.nickname=nick;
+  document.getElementById('userName').textContent='👋 '+name;
+  document.getElementById('profileNickname').textContent=nick;
+  document.getElementById('profileAvatar').textContent=nick.slice(0,2).toUpperCase();
+  document.getElementById('saveMsg').textContent='✅ Profil berhasil disimpan!';
+  document.getElementById('saveMsg').className='save-msg success';
+}
+
+// ── RANKING ───────────────────────────────────────
+async function loadRanking(){
+  const list=document.getElementById('rankList');
+  list.innerHTML='<div class="loading">Memuat ranking...</div>';
+  const [{data:allProg},{data:profilesData},{data:allAtt},{data:allAnswers}]=await Promise.all([
+    sb.from('user_progress').select('user_id,best_score,level_id'),
+    sb.from('profiles').select('id,nickname,full_name'),
+    sb.from('attempts').select('user_id,score'),
+    sb.from('user_answers').select('user_id,is_correct')
+  ]);
+  if(!allProg||allProg.length===0){list.innerHTML='<div class="loading">Belum ada data ranking.</div>';return;}
+  const profileMap={};
+  (profilesData||[]).forEach(p=>{profileMap[p.id]=p.nickname||(p.full_name||'').slice(0,3)+'***';});
+  const userXP={};
+  (allAtt||[]).forEach(a=>{userXP[a.user_id]=(userXP[a.user_id]||0)+(a.score*10);});
+  const userLevels={};
+  (allProg||[]).forEach(p=>{
+    const lv=allLevels.find(l=>l.id===p.level_id);
+    const passing=lv?passingScore(lv):8;
+    if(p.best_score>=passing)userLevels[p.user_id]=(userLevels[p.user_id]||0)+1;
+  });
+  const userAcc={};
+  (allAnswers||[]).forEach(a=>{
+    if(!userAcc[a.user_id])userAcc[a.user_id]={correct:0,total:0};
+    userAcc[a.user_id].total++;
+    if(a.is_correct)userAcc[a.user_id].correct++;
+  });
+  const allUids=[...new Set([...Object.keys(userXP),...Object.keys(userLevels)])];
+  const sorted=allUids.map(uid=>({
+    uid,xp:userXP[uid]||0,lv:userLevels[uid]||0,
+    accuracy:userAcc[uid]?Math.round(userAcc[uid].correct/userAcc[uid].total*100):0
+  }))
+  .filter(u=>u.lv>0||u.xp>0)
+  .sort((a,b)=>b.lv-a.lv||b.accuracy-a.accuracy||b.xp-a.xp)
+  .slice(0,20);
+  list.innerHTML='';
+  sorted.forEach(({uid,xp:totalXp,lv:levDone,accuracy},i)=>{
+    const isMe=uid===currentUser.id;
+    const name=profileMap[uid]||'Anonim';
+    const pos=i+1;
+    const medal=pos===1?'🥇':pos===2?'🥈':pos===3?'🥉':'';
+    const posClass=pos===1?'gold':pos===2?'silver':pos===3?'bronze':'';
+    const card=document.createElement('div');
+    card.className='rank-card'+(isMe?' me':'')+(posClass?' '+posClass:'');
+    card.innerHTML=`<div class="rank-pos ${posClass}">${medal||pos}</div>
+      <div class="rank-avatar">${name.slice(0,2).toUpperCase()}</div>
+      <div class="rank-info"><div class="rank-name">${name}${isMe?' (Kamu)':''}</div>
+      <div class="rank-detail">${levDone} level selesai · ${accuracy}% akurasi</div></div>
+      <div class="rank-xp"><div class="rank-xp-val">${totalXp} XP</div>
+      <div class="rank-xp-lv">Lv ${levDone}</div></div>`;
+    list.appendChild(card);
+  });
+}
+
+// ── INIT ──────────────────────────────────────────
+(async()=>{
+  const {data:{session}}=await sb.auth.getSession();
+  if(session){currentUser=session.user;await afterLogin();}
+})();
+</script>
+</body>
+</html>
