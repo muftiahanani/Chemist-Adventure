@@ -71,7 +71,7 @@ h1{font-size:2rem;font-weight:700;color:#166534}h1 span{color:#EA580C}
 .chapter-card.coming-soon{opacity:.5;cursor:default}
 .chapter-card:hover.coming-soon{transform:none;box-shadow:none;border-color:#D1FAE5}
 .chapter-top{display:flex;align-items:center;gap:10px;margin-bottom:8px}
-.chapter-num{font-size:11px;font-weight:700;color:#fff;background:#166534;border-radius:20px;padding:2px 10px;white-space:nowrap}
+.chapter-num" style="font-size:11px;font-weight:700;color:#fff;border-radius:20px;padding:2px 10px;white-space:nowrap}
 .chapter-name{font-size:14px;font-weight:700;color:#2C2C2A;flex:1}
 .chapter-desc{font-size:12px;color:#888;line-height:1.5;margin-bottom:8px}
 .chapter-levels-row{display:flex;gap:6px;flex-wrap:wrap}
@@ -286,6 +286,15 @@ h1{font-size:2rem;font-weight:700;color:#166534}h1 span{color:#EA580C}
   <div class="chapter-list" id="chapterList"></div>
 </div>
 
+<!-- MATERIAL VIEW -->
+<div id="materialView" class="screen">
+  <button class="back-btn" onclick="closeMaterial()">← Selesai Membaca</button>
+  <div style="text-align:center; padding-bottom: 0.5rem;">
+    <h3 id="materialTitle" style="color: #166534;">Materi Belajar</h3>
+  </div>
+  <iframe id="pdfViewer" src="" style="width:100%; height:75vh; border:2px solid #D1FAE5; border-radius:12px;"></iframe>
+</div>
+
 <!-- LEVEL SELECT -->
 <div id="levelSelect" class="screen">
   <button class="back-btn" onclick="showScreen('chapterSelect')">← Kembali</button>
@@ -391,7 +400,7 @@ h1{font-size:2rem;font-weight:700;color:#166534}h1 span{color:#EA580C}
     </div>
   </div>
   <div id="ptab-analysis" style="display:none">
-    <div id="analysisContent"><div class="loading">Memuat...</div></div>
+    <div class="analysisContent" id="analysisContent"><div class="loading">Memuat...</div></div>
   </div>
 </div>
 
@@ -426,6 +435,7 @@ let timerVal=15,timerInterval=null,answered=false,livesTimerInterval=null;
 let sessionAnswers=[],currentAttemptId=null,levelStartedAt=null,questionStartedAt=null;
 let currentGrade='grade10';
 let profileTabLoaded={stats:false,analysis:false};
+let materialStartedAt=null,currentReadingChapterId=null;
 
 // ── SCREEN ────────────────────────────
 function showScreen(id){
@@ -629,7 +639,6 @@ function renderHome(){
     const chapters=getChaptersForWorld(world.id);
     const isGrade11=currentGrade==='grade11';
 
-    // hitung progress world
     let totalActiveLevels=0,totalDone=0;
     chapters.forEach(ch=>{
       const lvs=getLevelsForChapter(ch.id).filter(l=>l.is_active);
@@ -637,7 +646,6 @@ function renderHome(){
       lvs.forEach(l=>{const p=getProgress(l.id);if(p&&p.best_score>=PASSING)totalDone++;});
     });
 
-    // chapter pills preview
     let chaptersHtml='';
     if(isGrade11){
       chaptersHtml=`<span class="coming-soon-badge">⏳ Segera Hadir</span>`;
@@ -672,11 +680,40 @@ function renderHome(){
   });
 }
 
+// ── MATERIAL MANAGEMENT ────────────────
+function openMaterial(chapterId, chapterName, pdfUrl) {
+  if (!pdfUrl) {
+    showModal('📝', 'Materi Belajar', 'File PDF untuk materi ini belum tersedia.');
+    return;
+  }
+  materialStartedAt = Date.now();
+  currentReadingChapterId = chapterId;
+  document.getElementById('materialTitle').textContent = `📖 Materi: ${chapterName}`;
+  document.getElementById('pdfViewer').src = pdfUrl;
+  showScreen('materialView');
+}
+
+async function closeMaterial() {
+  if (materialStartedAt && currentReadingChapterId) {
+    const durationSeconds = Math.round((Date.now() - materialStartedAt) / 1000);
+    document.getElementById('pdfViewer').src = "";
+    if (durationSeconds > 2) {
+      await sb.from('user_material_sessions').insert({
+        user_id: currentUser.id,
+        chapter_id: currentReadingChapterId,
+        duration_seconds: durationSeconds
+      });
+    }
+  }
+  materialStartedAt = null;
+  currentReadingChapterId = null;
+  openWorld(currentWorld, currentWorldIdx);
+}
+
 // ── CHAPTER SELECT ────────────────────
 function openWorld(world,idx){
   currentWorld=world;currentWorldIdx=idx;
   const color=WORLD_COLORS[idx%WORLD_COLORS.length];
-  const bg=WORLD_BG[idx%WORLD_BG.length];
   const chapters=getChaptersForWorld(world.id);
 
   document.getElementById('chapterSelectHeader').innerHTML=`
@@ -695,7 +732,6 @@ function openWorld(world,idx){
     const activeLevels=levels.filter(l=>l.is_active);
     const isComingSoon=activeLevels.length===0||levels.every(l=>!l.is_active);
 
-    // level pills
     const pillsHtml=levels.map(level=>{
       if(!level.is_active)return`<span class="level-pill inactive">${DIFF_LABEL[level.difficulty]||level.name} ⏳</span>`;
       const p=getProgress(level.id);
@@ -707,9 +743,11 @@ function openWorld(world,idx){
       return`<span class="level-pill ${cls}">${DIFF_LABEL[level.difficulty]||level.name} ${icon}</span>`;
     }).join('');
 
-    // progress chapter
     const doneLevels=activeLevels.filter(l=>{const p=getProgress(l.id);return p&&p.best_score>=PASSING;});
     const progressTxt=isComingSoon?'Segera hadir':`${doneLevels.length}/${activeLevels.length} level selesai`;
+    const materialBtnHtml = chapter.pdf_url 
+      ? `<button class="profile-btn" style="margin-top: 10px; width: 100%; display: block; padding: 6px; font-size:12px;" onclick="event.stopPropagation(); openMaterial('${chapter.id}', '${chapter.name}', '${chapter.pdf_url}')">📖 Baca Materi PDF</button>`
+      : '';
 
     const card=document.createElement('div');
     card.className='chapter-card'+(isComingSoon?' coming-soon':'');
@@ -721,6 +759,7 @@ function openWorld(world,idx){
       </div>
       ${chapter.description?`<div class="chapter-desc">${chapter.description}</div>`:''}
       <div class="chapter-levels-row">${pillsHtml}</div>
+      ${materialBtnHtml}
       <div style="font-size:11px;color:${isComingSoon?'#888':color};font-weight:600;margin-top:8px">${progressTxt}</div>`;
 
     if(!isComingSoon){
@@ -1104,33 +1143,62 @@ async function saveProfile(){
 async function loadRanking(){
   const list=document.getElementById('rankList');
   list.innerHTML='<div class="loading">Memuat ranking...</div>';
+  
   const [{data:allProg},{data:profilesData},{data:allAtt},{data:allAnswers}]=await Promise.all([
-    sb.from('user_progress').select('user_id,best_score,level_id'),
+    sb.from('user_progress').select('user_id,best_score,completed'),
     sb.from('profiles').select('id,nickname,full_name'),
     sb.from('attempts').select('user_id,score'),
     sb.from('user_answers').select('user_id,is_correct')
   ]);
-  if(!allProg||allProg.length===0){list.innerHTML='<div class="loading">Belum ada data ranking.</div>';return;}
+  
+  if((!allProg||allProg.length===0)&&(!allAtt||allAtt.length===0)){
+    list.innerHTML='<div class="loading">Belum ada data ranking.</div>';
+    return;
+  }
+  
   const profileMap={};
   (profilesData||[]).forEach(p=>{profileMap[p.id]=p.nickname||(p.full_name||'').slice(0,3)+'***';});
+  
   const userXP={};
   (allAtt||[]).forEach(a=>{userXP[a.user_id]=(userXP[a.user_id]||0)+(a.score*10);});
+  
   const userLevels={};
-  (allProg||[]).forEach(p=>{if(p.best_score>=PASSING)userLevels[p.user_id]=(userLevels[p.user_id]||0)+1;});
+  (allProg||[]).forEach(p=>{
+    if(p.best_score>=PASSING||p.completed) userLevels[p.user_id]=(userLevels[p.user_id]||0)+1;
+  });
+  
   const userAcc={};
   (allAnswers||[]).forEach(a=>{
     if(!userAcc[a.user_id])userAcc[a.user_id]={correct:0,total:0};
     userAcc[a.user_id].total++;
     if(a.is_correct)userAcc[a.user_id].correct++;
   });
-  const allUids=[...new Set([...Object.keys(userXP),...Object.keys(userLevels)])];
-  const sorted=allUids.map(uid=>({
-    uid,xp:userXP[uid]||0,lv:userLevels[uid]||0,
-    accuracy:userAcc[uid]?Math.round(userAcc[uid].correct/userAcc[uid].total*100):0
-  })).filter(u=>u.lv>0||u.xp>0).sort((a,b)=>b.lv-a.lv||b.accuracy-a.accuracy||b.xp-a.xp).slice(0,20);
+  
+  const allUids=[...new Set([
+    ...(profilesData||[]).map(p=>p.id),
+    ...Object.keys(userXP),
+    ...Object.keys(userLevels)
+  ])];
+  
+  const sorted=allUids.map(uid=>{
+    const totalCorrect=userAcc[uid]?userAcc[uid].correct:0;
+    const totalQuestions=userAcc[uid]?userAcc[uid].total:0;
+    const pctAccuracy=totalQuestions>0?Math.round((totalCorrect/totalQuestions)*100):0;
+    return{
+      uid,
+      xp:userXP[uid]||0,
+      lv:userLevels[uid]||0,
+      accuracy:pctAccuracy
+    };
+  }).sort((a,b)=>{
+    if(b.lv!==a.lv)return b.lv-a.lv;
+    if(b.accuracy!==a.accuracy)return b.accuracy-a.accuracy;
+    return b.xp-a.xp;
+  }).slice(0,20);
+  
   list.innerHTML='';
   sorted.forEach(({uid,xp:totalXp,lv:levDone,accuracy},i)=>{
-    const isMe=uid===currentUser.id;
+    const isMe=currentUser&&uid===currentUser.id;
     const name=profileMap[uid]||'Anonim';
     const pos=i+1;
     const medal=pos===1?'🥇':pos===2?'🥈':pos===3?'🥉':'';
@@ -1155,5 +1223,3 @@ async function loadRanking(){
 </script>
 </body>
 </html>
-
-
