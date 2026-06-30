@@ -319,7 +319,7 @@ h1{font-size:2rem;font-weight:700;color:#166534}h1 span{color:#EA580C}
         <circle id="timerArc" cx="22" cy="22" r="18" fill="none" stroke="#166534" stroke-width="3.5"
           stroke-dasharray="113.1" stroke-dashoffset="0" stroke-linecap="round"/>
       </svg>
-      <div class="timer-num" id="timerNum">15</div>
+      <div class="timer-num" id="timerNum">45</div>
     </div>
     <div class="xp-badge" id="xpBadge">0 XP</div>
   </div>
@@ -915,20 +915,20 @@ function renderQuestion(){
   startTimer();
 }
 function startTimer(){
-  clearInterval(timerInterval);timerVal=15;updateTimerUI();
+  clearInterval(timerInterval);timerVal=45;updateTimerUI();
   timerInterval=setInterval(()=>{timerVal--;updateTimerUI();if(timerVal<=0){clearInterval(timerInterval);timeUp();}},1000);
 }
 function updateTimerUI(){
   document.getElementById('timerNum').textContent=timerVal;
   const arc=document.getElementById('timerArc');
-  arc.style.strokeDashoffset=113.1*(1-timerVal/15);
+  arc.style.strokeDashoffset=113.1*(1-timerVal/45);
   arc.style.stroke=timerVal<=5?'#E24B4A':'#166534';
 }
 function timeUp(){
   if(answered)return;
   answered=true;levelHearts--;renderHearts();
   const q=shuffledQuestions[currentQ];
-  sessionAnswers.push({question_id:q.orig_id,selected_index:-1,is_correct:false,response_time_seconds:15});
+  sessionAnswers.push({question_id:q.orig_id,selected_index:-1,is_correct:false,response_time_seconds:45});
   showFeedback(false,null,true);disableOptions();
   if(levelHearts<=0){setTimeout(()=>showGameOver(),1300);return;}
   setTimeout(nextQuestion,1600);
