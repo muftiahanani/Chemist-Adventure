@@ -286,9 +286,15 @@ h1{font-size:2rem;font-weight:700;color:#166534}h1 span{color:#EA580C}
   <div class="chapter-list" id="chapterList"></div>
 </div>
 
-<!-- MATERIAL VIEW -->
+<!-- SCREEN BACA MATERI (DENGAN VISUAL TIMER) -->
 <div id="materialView" class="screen">
-  <button class="back-btn" onclick="closeMaterial()">← Selesai Membaca</button>
+  <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+    <button class="back-btn" onclick="closeMaterial()" style="padding: 0; margin: 0;">← Selesai Membaca</button>
+    <!-- Elemen Visual Timer Baru -->
+    <div id="materialTimerDisplay" style="font-size: 14px; font-weight: 700; color: #166534; background: #DCFCE7; padding: 4px 12px; border-radius: 20px;">
+      ⏱️ Membaca: 00:00
+    </div>
+  </div>
   <div style="text-align:center; padding-bottom: 0.5rem;">
     <h3 id="materialTitle" style="color: #166534;">Materi Belajar</h3>
   </div>
@@ -428,6 +434,7 @@ const DIFF_LABEL={easy:'Mudah',medium:'Sedang',hard:'Sulit',combo:'Kombinasi'};
 const MAX_LIVES=5,LIFE_REGEN_MS=10*60*1000;
 const PASSING=14,MAX_Q=20;
 
+let materialTimerInterval = null; // Taruh di baris paling atas kumpulan variabel global Anda
 let currentUser=null,worlds=[],allChapters=[],allLevels=[],allProgress=[],userProfile=null,allAttempts=[];
 let currentWorld=null,currentWorldIdx=0,currentChapter=null,currentLevel=null;
 let shuffledQuestions=[],currentQ=0,levelHearts=3,xp=0,correct=0;
@@ -680,36 +687,58 @@ function renderHome(){
   });
 }
 
-// ── MATERIAL MANAGEMENT ────────────────
 function openMaterial(chapterId, chapterName, pdfUrl) {
   if (!pdfUrl) {
     showModal('📝', 'Materi Belajar', 'File PDF untuk materi ini belum tersedia.');
     return;
   }
+  
+  // 1. Catat waktu mulai membaca
   materialStartedAt = Date.now();
   currentReadingChapterId = chapterId;
+  
+  // 2. Set UI teks judul materi
   document.getElementById('materialTitle').textContent = `📖 Materi: ${chapterName}`;
   document.getElementById('pdfViewer').src = pdfUrl;
+  
+  // 3. JALANKAN TIMER VISUAL (BARU)
+  clearInterval(materialTimerInterval); // Bersihkan sisa interval sebelumnya jika ada
+  const timerDisplay = document.getElementById('materialTimerDisplay');
+  
+  materialTimerInterval = setInterval(() => {
+    // Hitung sudah berapa detik berjalan sejak klik tombol
+    const elapsedSec = Math.round((Date.now() - materialStartedAt) / 1000);
+    // Tampilkan di layar dengan format menit:detik lewat fungsi formatDuration bawaan aplikasi
+    timerDisplay.textContent = `⏱️ Membaca: ${formatDuration(elapsedSec)}`;
+  }, 1000);
+  
   showScreen('materialView');
 }
 
 async function closeMaterial() {
+  // 1. Hentikan detak visual timer (BARU)
+  clearInterval(materialTimerInterval);
+
   if (materialStartedAt && currentReadingChapterId) {
     const durationSeconds = Math.round((Date.now() - materialStartedAt) / 1000);
     document.getElementById('pdfViewer').src = "";
+
+    // 2. Simpan ke database jika durasi valid
     if (durationSeconds > 2) {
       await sb.from('user_material_sessions').insert({
         user_id: currentUser.id,
         chapter_id: currentReadingChapterId,
         duration_seconds: durationSeconds
       });
+      console.log(`Berhasil menyimpan durasi membaca: ${durationSeconds} detik.`);
     }
   }
+  
+  // 3. Reset status data
   materialStartedAt = null;
   currentReadingChapterId = null;
   openWorld(currentWorld, currentWorldIdx);
 }
-
 // ── CHAPTER SELECT ────────────────────
 function openWorld(world,idx){
   currentWorld=world;currentWorldIdx=idx;
