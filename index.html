@@ -273,7 +273,7 @@ h1{font-size:2rem;font-weight:700;color:#166534}h1 span{color:#EA580C}
   <div id="tabRanking" style="display:none">
     <div class="rank-header">
       <div class="rank-title">🏆 Papan Peringkat</div>
-      <div class="rank-sub">Urutan: level selesai → akurasi → XP</div>
+      <div class="rank-sub">Urutan: level selesai → XP → akurasi</div>
     </div>
     <div class="rank-list" id="rankList"><div class="loading">Memuat...</div></div>
   </div>
@@ -1219,11 +1219,11 @@ async function loadRanking(){
       lv:userLevels[uid]||0,
       accuracy:pctAccuracy
     };
-  }).sort((a,b)=>{
-    if(b.lv!==a.lv)return b.lv-a.lv;
-    if(b.accuracy!==a.accuracy)return b.accuracy-a.accuracy;
-    return b.xp-a.xp;
-  }).slice(0,20);
+  }).sort((a, b) => {
+    if (b.lv !== a.lv) return b.lv - a.lv;             // 1. Prioritas utama: Level selesai
+    if (b.xp !== a.xp) return b.xp - a.xp;             // 2. Prioritas kedua: Total XP tertinggi
+    return b.accuracy - a.accuracy;                    // 3. Prioritas ketiga: Akurasi (jika level & XP sama)
+  }); // Potongan .slice(0, 20) dihapus agar semua pemain muncul
   
   list.innerHTML='';
   sorted.forEach(({uid,xp:totalXp,lv:levDone,accuracy},i)=>{
