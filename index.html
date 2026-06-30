@@ -653,15 +653,30 @@ function renderHome(){
       lvs.forEach(l=>{const p=getProgress(l.id);if(p&&p.best_score>=PASSING)totalDone++;});
     });
 
-    let chaptersHtml='';
-    if(isGrade11){
-      chaptersHtml=`<span class="coming-soon-badge">⏳ Segera Hadir</span>`;
+    let chaptersHtml = '';
+    if (isGrade11) {
+      chaptersHtml = `<span class="coming-soon-badge">⏳ Segera Hadir</span>`;
     } else {
-      chaptersHtml=chapters.map(ch=>{
-        const lvs=getLevelsForChapter(ch.id).filter(l=>l.is_active);
-        const done=lvs.some(l=>{const p=getProgress(l.id);return p&&p.best_score>=PASSING;});
-        return`<span class="chapter-dot${done?' has-progress':''}">${ch.name}</span>`;
-      }).join('');
+      // Filter hanya chapter yang memiliki level aktif di dalamnya
+      const activeChapters = chapters.filter(ch => {
+        const lvs = getLevelsForChapter(ch.id).filter(l => l.is_active);
+        return lvs.length > 0;
+      });
+
+      if (activeChapters.length === 0) {
+        // Jika benar-benar belum ada chapter/level aktif sama sekali di world ini
+        chaptersHtml = `<span class="coming-soon-badge">⏳ Segera Hadir</span>`;
+      } else {
+        // Petakan hanya chapter-chapter yang valid dan aktif (TIDAK menambahkan pil "Segera Hadir" manual)
+        chaptersHtml = activeChapters.map(ch => {
+          const lvs = getLevelsForChapter(ch.id).filter(l => l.is_active);
+          const done = lvs.some(l => {
+            const p = getProgress(l.id);
+            return p && p.best_score >= PASSING;
+          });
+          return `<span class="chapter-dot${done ? ' has-progress' : ''}">${ch.name}</span>`;
+        }).join('');
+      }
     }
 
     const card=document.createElement('div');
